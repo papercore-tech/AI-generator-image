@@ -7,7 +7,6 @@ import torch
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
-from transformers import GPT2Tokenizer, GPT2LMHeadModel
 import diffusers
 import transformers
 import huggingface_hub
@@ -45,11 +44,6 @@ def translate_to_english(prompt: str) -> str:
         return prompt  # fallback
 
 
-# GPT-2 для оценки сложности
-gpt2_tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-gpt2_model = GPT2LMHeadModel.from_pretrained("gpt2").to(device)
-gpt2_model.eval()
-
 # Stable Diffusion
 from diffusers import StableDiffusionPipeline
 
@@ -60,21 +54,13 @@ pipe = StableDiffusionPipeline.from_pretrained(
     low_cpu_mem_usage=False
 ).to(device)
 
-# Оценка сложности текста
-def evaluate_complexity(prompt):
-    inputs = gpt2_tokenizer.encode(prompt, return_tensors="pt").to(device)
-    with torch.no_grad():
-        outputs = gpt2_model(inputs, labels=inputs)
-        return outputs.loss.item()
+
 
 def generate_image(prompt):
     translated_prompt = translate_to_english(prompt)
     print(f"[DEBUG] Переведённый запрос: {translated_prompt}")
 
-    complexity = evaluate_complexity(translated_prompt)
-    print(f"[DEBUG] Сложность: {complexity:.2f}")
-
-    image = pipe(translated_prompt, guidance_scale=7.5, num_inference_steps=50).images[0]
+    image = pipe(translated_prompt, guidance_scale=7.5, num_inference_steps=30).images[0]
 
     os.makedirs("output", exist_ok=True)
     image.save("output/generated_image.png")
